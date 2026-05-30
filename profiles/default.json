@@ -10,7 +10,7 @@
     "open_palm": "show_desktop",
     "thumbs_up": "volume_up",
     "thumbs_down": "volume_down",
-    "peace_sign": "take_screenshot",
+    "hold_peace_sign": "take_screenshot",
     "pointing": "next_tab",
     "ok_sign": "media_play_pause",
     "three_fingers_up": "maximize_window",

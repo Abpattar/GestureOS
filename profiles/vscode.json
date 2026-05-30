@@ -10,7 +10,7 @@
     "open_palm": "new_tab",
     "thumbs_up": "redo",
     "thumbs_down": "undo",
-    "peace_sign": "copy",
+    "hold_peace_sign": "copy",
     "l_shape": "paste",
     "ok_sign": "select_all"
   }

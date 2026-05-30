@@ -9,6 +9,6 @@
     "thumbs_up": "volume_up",
     "thumbs_down": "volume_down",
     "ok_sign": "volume_mute",
-    "peace_sign": "take_screenshot"
+    "hold_peace_sign": "take_screenshot"
   }
 }
