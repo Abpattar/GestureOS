@@ -1,0 +1,21 @@
+{
+  "gestures": {
+    "swipe_left": "browser_back",
+    "swipe_right": "browser_forward",
+    "swipe_up": "scroll_up",
+    "swipe_down": "scroll_down",
+    "pinch_in": "zoom_out",
+    "pinch_out": "zoom_in",
+    "fist": "close_tab",
+    "open_palm": "new_tab",
+    "thumbs_up": "scroll_up",
+    "thumbs_down": "scroll_down",
+    "peace_sign": "refresh_page",
+    "pointing": "next_tab",
+    "ok_sign": "zoom_reset",
+    "three_fingers_up": "new_tab",
+    "l_shape": "close_tab",
+    "rotate_cw": "next_tab",
+    "rotate_ccw": "prev_tab"
+  }
+}

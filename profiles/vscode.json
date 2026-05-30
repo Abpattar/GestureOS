@@ -1,0 +1,17 @@
+{
+  "gestures": {
+    "swipe_left": "prev_tab",
+    "swipe_right": "next_tab",
+    "swipe_up": "scroll_up",
+    "swipe_down": "scroll_down",
+    "pinch_in": "zoom_out",
+    "pinch_out": "zoom_in",
+    "fist": "close_tab",
+    "open_palm": "new_tab",
+    "thumbs_up": "redo",
+    "thumbs_down": "undo",
+    "peace_sign": "copy",
+    "l_shape": "paste",
+    "ok_sign": "select_all"
+  }
+}

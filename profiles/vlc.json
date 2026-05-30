@@ -1,0 +1,14 @@
+{
+  "gestures": {
+    "swipe_left": "media_previous",
+    "swipe_right": "media_next",
+    "swipe_up": "volume_up",
+    "swipe_down": "volume_down",
+    "fist": "media_play_pause",
+    "open_palm": "media_play_pause",
+    "thumbs_up": "volume_up",
+    "thumbs_down": "volume_down",
+    "ok_sign": "volume_mute",
+    "peace_sign": "take_screenshot"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "gestures": {
+    "swipe_left": "prev_tab",
+    "swipe_right": "next_tab",
+    "swipe_up": "scroll_up",
+    "swipe_down": "scroll_down",
+    "pinch_in": "zoom_out",
+    "pinch_out": "zoom_in",
+    "fist": "close_tab",
+    "open_palm": "show_desktop",
+    "thumbs_up": "volume_up",
+    "thumbs_down": "volume_down",
+    "peace_sign": "take_screenshot",
+    "pointing": "next_tab",
+    "ok_sign": "media_play_pause",
+    "three_fingers_up": "maximize_window",
+    "three_fingers_down": "minimize_window",
+    "four_fingers_up": "switch_window",
+    "l_shape": "undo",
+    "hold_fist": "close_window",
+    "hold_open_palm": "show_desktop",
+    "rotate_cw": "volume_up",
+    "rotate_ccw": "volume_down"
+  }
+}

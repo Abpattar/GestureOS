@@ -1,0 +1,30 @@
+{
+  "camera": {
+    "index": 0,
+    "target_fps": 30,
+    "width": 1280,
+    "height": 720
+  },
+  "tracker": {
+    "max_hands": 2,
+    "detection_confidence": 0.7,
+    "tracking_confidence": 0.6,
+    "draw_landmarks": true
+  },
+  "gesture_engine": {
+    "swipe_min_distance": 0.18,
+    "swipe_min_speed": 0.008,
+    "swipe_cooldown_sec": 0.6,
+    "pinch_threshold": 0.07,
+    "hold_duration_sec": 1.5
+  },
+  "ui": {
+    "show_overlay": true,
+    "show_camera_feed": false,
+    "overlay_position": "top_right"
+  },
+  "paths": {
+    "custom_gestures": "gestures/user_defined/custom_gestures.json",
+    "profiles_dir": "profiles"
+  }
+}

@@ -1,0 +1,41 @@
+@"
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+*.egg-info/
+dist/
+build/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# MediaPipe model
+*.task
+
+# Screenshots
+*.png
+*.jpg
+*.jpeg
+
+# Logs
+*.log
+
+# User-specific profiles
+profiles/user_profiles/*
+!profiles/user_profiles/.gitkeep
+"@ | Out-File -FilePath ".gitignore" -Encoding utf8
