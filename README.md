@@ -1,4 +1,4 @@
-@"
+
 # 🎮 GestureOS
 
 Control your PC using hand gestures! No keyboard, no mouse – just your webcam.
@@ -72,4 +72,3 @@ MIT License - Feel free to modify and distribute!
 ## 🙏 Credits
 
 Built with [MediaPipe](https://mediapipe.dev/) by Google
-"@ | Out-File -FilePath "README.md" -Encoding utf8
