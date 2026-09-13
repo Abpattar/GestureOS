@@ -33,8 +33,21 @@ class ContextDetector:
     def get_active_window_name(self):
         if self._platform == "Windows":
             try:
-                import win32gui
-                return win32gui.GetWindowText(win32gui.GetForegroundWindow())
+                import ctypes
+                from ctypes import wintypes
+
+                user32 = ctypes.windll.user32
+                user32.GetForegroundWindow.restype = wintypes.HWND
+                user32.GetWindowTextLengthW.argtypes = [wintypes.HWND]
+                user32.GetWindowTextLengthW.restype = ctypes.c_int
+                user32.GetWindowTextW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
+                user32.GetWindowTextW.restype = ctypes.c_int
+
+                hwnd = user32.GetForegroundWindow()
+                n = user32.GetWindowTextLengthW(hwnd)
+                buf = ctypes.create_unicode_buffer(n + 1)
+                user32.GetWindowTextW(hwnd, buf, n + 1)
+                return buf.value
             except Exception as e:
                 print(f"[Context] Error: {e}")
                 return ""

@@ -2,6 +2,7 @@ import cv2
 import sys
 import os
 import json
+import time
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -19,7 +20,7 @@ def load_config(path: str = "config.json") -> dict:
 
 def main():
     print("=" * 50)
-    print("  GestureOS — Starting up")
+    print("  GestureOS - Starting up")
     print("=" * 50)
 
     config = load_config()
@@ -38,7 +39,8 @@ def main():
 
     engine = GestureEngine(
         tracker=tracker,
-        custom_gestures_path=config["paths"]["custom_gestures"]
+        custom_gestures_path=config["paths"]["custom_gestures"],
+        settings=config.get("gesture_engine", {})
     )
 
     context = ContextDetector()
@@ -47,22 +49,39 @@ def main():
     cam.start()
 
     print("\nGestureOS running.")
-    print("  Wave once  → Activate")
-    print("  Wave twice → Deactivate")
+    print("  Show both open palms -> Activate / Deactivate")
     print("  Press Q to quit.\n")
 
     try:
         while True:
             frame = cam.get_frame()
             if frame is None:
+                time.sleep(0.01)
                 continue
 
-            hands, annotated_frame = tracker.process(frame)
-            gesture = engine.process(hands)
+            # Process tracking
+            try:
+                hands, annotated_frame = tracker.process(frame)
+            except Exception as e:
+                print(f"[Error] Tracking: {e}")
+                annotated_frame = frame
+                hands = []
 
+            # Process gestures
+            gesture = None
+            try:
+                gesture = engine.process(hands)
+            except Exception as e:
+                print(f"[Error] Gesture engine: {e}")
+
+            # Execute action
             if gesture:
-                executor.execute(gesture)
+                try:
+                    executor.execute(gesture)
+                except Exception as e:
+                    print(f"[Error] Executor: {e}")
 
+            # Draw UI
             status_color = (0, 255, 80) if engine.active else (0, 80, 255)
             status_text  = "ACTIVE" if engine.active else "INACTIVE"
 
@@ -71,24 +90,23 @@ def main():
             cv2.putText(annotated_frame, f"FPS: {cam.fps_actual:.0f}",
                         (10, 65), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200, 200, 200), 1)
 
+            # 2-finger hold progress bar
+            progress = engine.get_hold_progress()
+            if progress > 0.0 or engine.pose_active:
+                cv2.putText(annotated_frame, "2 FINGERS UP - SWITCH WINDOW",
+                            (10, 100), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 220, 255), 1)
+                bar_w = int(280 * progress)
+                cv2.rectangle(annotated_frame, (10, 108), (290, 122), (60, 60, 60), -1)
+                cv2.rectangle(annotated_frame, (10, 108), (10 + bar_w, 122), (0, 220, 255), -1)
+
             if gesture:
                 cv2.putText(annotated_frame, f"Gesture: {gesture}",
                             (10, 95), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 220, 255), 2)
 
-            cv2.putText(annotated_frame, f"Context: {context.get_context()}",
-                        (10, annotated_frame.shape[0] - 15),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.55, (180, 180, 180), 1)
-
-            hold_progress = engine.get_hold_progress()
-            if hold_progress > 0.05:
-                bar_w = int(annotated_frame.shape[1] * hold_progress)
-                cv2.rectangle(annotated_frame,
-                              (0, annotated_frame.shape[0] - 6),
-                              (bar_w, annotated_frame.shape[0]),
-                              (0, 255, 150), -1)
-
+            # Show window
             cv2.imshow("GestureOS", annotated_frame)
 
+            # Check for quit
             if cv2.waitKey(1) & 0xFF == ord("q"):
                 break
 

@@ -1,69 +1,66 @@
-
 # 🎮 GestureOS
 
 Control your PC using hand gestures! No keyboard, no mouse – just your webcam.
 
 ## ✨ Features
 
-- 🖐️ **20+ Gestures**: Swipes, pinches, static poses, holds, and rotations
-- 🎯 **Context-Aware**: Different actions for Chrome, VS Code, VLC, etc.
+- ✌️ **Hold-to-Activate**: Hold two fingers up to switch the active window
+- 🔄 **Smart Window Cycling**: Cycles through **all** open apps (Store, Paint, Chrome, games...) in a stable order — no Alt+Tab bounce
+- 🧭 **Rotation-Invariant**: Gestures work at any hand angle
+- 🎯 **Context-Aware**: Per-app action profiles (Chrome, VS Code, VLC, default)
 - ⚡ **Real-time**: 30 FPS tracking with MediaPipe
-- 🔧 **Customizable**: JSON-based profiles and gesture definitions
-- 🪟 **Cross-Platform**: Windows & Linux support
+- 🔧 **Customizable**: JSON-based profiles and settings
 
 ## 🚀 Quick Start
 
 ### 1. Install Dependencies
 
-\`\`\`powershell
+```powershell
 pip install -r requirements.txt
-\`\`\`
+```
 
 ### 2. Run
 
-\`\`\`powershell
+```powershell
 python main.py
-\`\`\`
+```
 
 ### 3. Activate
 
-- **Wave once** → Activate gesture control
-- **Wave twice** → Deactivate
+- **Show both open palms** → Toggle gesture control ON/OFF
 - **Press Q** → Quit
 
-## 🎯 Supported Gestures
+## 👋 Gestures
 
-| Gesture | Default Action |
-|---------|---------------|
-| Swipe Left | Previous Tab |
-| Swipe Right | Next Tab |
-| Swipe Up | Scroll Up |
-| Swipe Down | Scroll Down |
-| Pinch In | Zoom Out |
-| Pinch Out | Zoom In |
-| Fist | Close Tab |
-| Open Palm | Show Desktop |
-| Thumbs Up | Volume Up |
-| Thumbs Down | Volume Down |
-| Peace Sign | Screenshot |
-| OK Sign | Play/Pause |
-| Pointing | Next Tab |
-| L-Shape | Undo |
+| Gesture | What it does |
+|---------|-------------|
+| ✌️ Hold 2 fingers (peace sign) up ~0.6s | Switch to the **next** open window |
+| 👋 Swipe left / right | Previous / Next tab (Alt+Tab fallback) |
+
+Notes:
+- The peace sign works in **any rotation** (verified at all angles).
+- The window list auto-syncs every gesture: new apps (e.g. Microsoft Store) appear, closed apps are dropped — nothing gets stuck.
+- One switch per hold; wait ~0.8s before the next hold re-arms.
 
 ## 🛠️ Configuration
 
-Edit \`config.json\` to adjust:
-- Camera settings
-- Detection thresholds
-- Gesture timing
+Edit `config.json`:
 
-Edit \`profiles/*.json\` to customize actions per app.
+- `gesture_engine.hold_duration_sec` — how long to hold the peace sign (default `0.6`)
+- `gesture_engine.gesture_gap_sec` — delay before a gesture can re-fire (default `0.8`)
+- `camera.index` — webcam device ID
+- `tracker.*` — MediaPipe detection/tracking confidence
+
+Edit `profiles/*.json` to change which action each gesture fires (e.g.
+`hold_peace_sign` → `cycle_window_forward` / `cycle_window_backward`).
 
 ## 📦 Requirements
 
-- Python 3.8 - 3.11 (not 3.12)
+- Python 3.8 – 3.11 (not 3.12 — MediaPipe)
 - Webcam
-- Windows 10/11 or Ubuntu 20.04+
+- Windows 10/11
+
+Windows-only: window switching uses Win32 via `ctypes` (no extra Windows deps).
 
 ## 📄 License
 
@@ -72,5 +69,3 @@ MIT License - Feel free to modify and distribute!
 ## 🙏 Credits
 
 Built with [MediaPipe](https://mediapipe.dev/) by Google
-
-Work Under Progress 

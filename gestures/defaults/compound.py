@@ -5,7 +5,7 @@ from core.tracker import HandData, LM
 
 
 class WaveDetector:
-    def __init__(self, reversal_threshold=0.06, max_wave_duration=1.5, cooldown_sec=1.0):
+    def __init__(self, reversal_threshold=0.08, max_wave_duration=1.2, cooldown_sec=0.8):
         self.reversal_threshold = reversal_threshold
         self.max_wave_duration  = max_wave_duration
         self.cooldown_sec       = cooldown_sec
@@ -39,14 +39,10 @@ class WaveDetector:
 
         wave_count = len(self._reversals) // 2
 
-        if wave_count >= 2:
-            self._last_fire = now;  self._reversals.clear()
-            return 2
-
-        if wave_count == 1 and len(self._reversals) >= 2:
-            if now - self._reversals[-1] > 0.5:
-                self._last_fire = now;  self._reversals.clear()
-                return 1
+        if wave_count >= 1:
+            self._last_fire = now
+            self._reversals.clear()
+            return True
 
         return None
 
@@ -56,33 +52,8 @@ class WaveDetector:
         self._last_direction = None
 
 
-class HoldDetector:
-    def __init__(self, hold_duration=1.5):
-        self.hold_duration   = hold_duration
-        self._pose_start     = None
-        self._current_pose   = None
-
-    def update(self, pose_name):
-        now = time.time()
-        if pose_name is None:
-            self._pose_start = None;  self._current_pose = None
-            return None
-        if pose_name != self._current_pose:
-            self._current_pose = pose_name;  self._pose_start = now
-            return None
-        if now - self._pose_start >= self.hold_duration:
-            self._pose_start = now + self.hold_duration
-            return pose_name
-        return None
-
-    def get_progress(self):
-        if self._pose_start is None:
-            return 0.0
-        return min((time.time() - self._pose_start) / self.hold_duration, 1.0)
-
-
 class WristRotationDetector:
-    def __init__(self, min_rotation_deg=40.0, window_size=20, cooldown_sec=0.7):
+    def __init__(self, min_rotation_deg=45.0, window_size=15, cooldown_sec=0.5):
         self.min_rotation_deg = min_rotation_deg
         self.cooldown_sec     = cooldown_sec
         self._angles          = deque(maxlen=window_size)
@@ -106,12 +77,11 @@ class WristRotationDetector:
         if delta > 180:   delta -= 360
         elif delta < -180: delta += 360
 
-        if delta > self.min_rotation_deg:
-            self._last_fire = now;  self._angles.clear()
-            return "rotate_cw"
-        if delta < -self.min_rotation_deg:
-            self._last_fire = now;  self._angles.clear()
-            return "rotate_ccw"
+        if abs(delta) > self.min_rotation_deg:
+            self._last_fire = now
+            self._angles.clear()
+            return "wrist_rotate"
+
         return None
 
     def reset(self):

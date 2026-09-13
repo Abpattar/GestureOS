@@ -24,5 +24,5 @@ class ActionExecutor:
             print(f"[Executor] No mapping for '{gesture_name}' in '{context}'")
             return
 
-        print(f"[Executor] {gesture_name} → {context} → {action}")
+        print(f"[Executor] {gesture_name} -> {context} -> {action}")
         self._platform.execute(action)

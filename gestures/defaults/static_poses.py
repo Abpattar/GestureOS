@@ -7,67 +7,142 @@ class StaticPoseDetector:
         self.tracker = tracker
 
     def detect(self, hand: HandData):
+        """Detect single-hand gestures"""
         fingers = self.tracker.get_finger_states(hand)
-        pinch   = self.tracker.get_pinch_distance(hand)
         lm      = hand.landmarks
 
-        if self._ok_sign(hand, pinch):               return "ok_sign"
-        if self._thumbs_up(fingers, lm):             return "thumbs_up"
-        if self._thumbs_down(fingers, lm):           return "thumbs_down"
-        if self._fist(fingers):                      return "fist"
-        if self._open_palm(fingers):                 return "open_palm"
-        if self._peace(fingers):                     return "peace_sign"
-        if self._pointing(fingers):                  return "pointing"
-        if self._three_up(fingers):                  return "three_fingers_up"
-        if self._three_down(fingers, lm):            return "three_fingers_down"
-        if self._four_up(fingers):                   return "four_fingers_up"
-        if self._l_shape(fingers, hand, lm):         return "l_shape"
+        # Two fingers straight (for window switching)
+        if self._two_fingers_straight(fingers, lm):
+            return "two_fingers_straight"
+        
+        # ADD YOUR OTHER GESTURES HERE
+        
         return None
 
-    def _fist(self, f):
-        return not any(f.values())
+    def detect_two_hands(self, hands):
+        """
+        Detect TWO-HAND gestures
+        hands: list of HandData objects
+        Returns: gesture name or None
+        """
+        if len(hands) != 2:
+            return None
+        
+        # Check if both hands are open palms facing camera
+        if self._both_hands_facing_camera(hands):
+            return "two_hands_camera"
+        
+        return None
 
-    def _open_palm(self, f):
-        return all(f.values())
-
-    def _thumbs_up(self, f, lm):
-        others = not f["index"] and not f["middle"] and not f["ring"] and not f["pinky"]
-        return f["thumb"] and others and lm[LM.THUMB_TIP].y < lm[LM.WRIST].y
-
-    def _thumbs_down(self, f, lm):
-        others = not f["index"] and not f["middle"] and not f["ring"] and not f["pinky"]
-        return others and lm[LM.THUMB_TIP].y > lm[LM.WRIST].y
-
-    def _peace(self, f):
-        return f["index"] and f["middle"] and not f["ring"] and not f["pinky"]
-
-    def _pointing(self, f):
-        return f["index"] and not f["middle"] and not f["ring"] and not f["pinky"]
-
-    def _three_up(self, f):
-        return f["index"] and f["middle"] and f["ring"] and not f["pinky"] and not f["thumb"]
-
-    def _three_down(self, f, lm):
-        extended = f["index"] and f["middle"] and f["ring"]
-        tips_down = (lm[LM.INDEX_TIP].y  > lm[LM.INDEX_MCP].y and
-                     lm[LM.MIDDLE_TIP].y > lm[LM.MIDDLE_MCP].y and
-                     lm[LM.RING_TIP].y   > lm[LM.RING_MCP].y)
-        return extended and tips_down
-
-    def _four_up(self, f):
-        return f["index"] and f["middle"] and f["ring"] and f["pinky"] and not f["thumb"]
-
-    def _ok_sign(self, hand, pinch_dist):
-        f = self.tracker.get_finger_states(hand)
-        return pinch_dist < 0.07 and f["middle"] and f["ring"] and f["pinky"]
-
-    def _l_shape(self, f, hand, lm):
-        if not (f["index"] and f["thumb"] and not f["middle"] and not f["ring"] and not f["pinky"]):
+    # ========== TWO-HAND GESTURES ==========
+    
+    def _both_hands_facing_camera(self, hands):
+        """
+        CLEAN VERSION: Both hands open, palms facing camera
+        """
+        
+        if len(hands) != 2:
             return False
-        t  = np.array([lm[LM.THUMB_TIP].x,   lm[LM.THUMB_TIP].y])
-        i  = np.array([lm[LM.INDEX_TIP].x,   lm[LM.INDEX_TIP].y])
-        w  = np.array([lm[LM.WRIST].x,        lm[LM.WRIST].y])
-        v1 = t - w;  v2 = i - w
-        cos_a = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2) + 1e-6)
-        angle = np.degrees(np.arccos(np.clip(cos_a, -1, 1)))
-        return 60 < angle < 120
+        
+        for hand in hands:
+            fingers = self.tracker.get_finger_states(hand)
+            
+            # All 5 fingers must be extended
+            if not all(fingers.values()):
+                return False
+            
+            lm = hand.landmarks
+            
+            # Check z-depth (palm facing camera)
+            tips_z = [
+                lm[LM.THUMB_TIP].z,
+                lm[LM.INDEX_TIP].z,
+                lm[LM.MIDDLE_TIP].z,
+                lm[LM.RING_TIP].z,
+                lm[LM.PINKY_TIP].z
+            ]
+            
+            z_variance = max(tips_z) - min(tips_z)
+            if z_variance > 0.08:
+                return False
+            
+            # Check wrist behind fingertips
+            wrist_z = lm[LM.WRIST].z
+            avg_tip_z = np.mean(tips_z)
+            if wrist_z < avg_tip_z:
+                return False
+            
+            # Check finger spread
+            tip_xs = [
+                lm[LM.THUMB_TIP].x,
+                lm[LM.INDEX_TIP].x,
+                lm[LM.MIDDLE_TIP].x,
+                lm[LM.RING_TIP].x,
+                lm[LM.PINKY_TIP].x
+            ]
+            horizontal_span = max(tip_xs) - min(tip_xs)
+            if horizontal_span < 0.15:
+                return False
+        
+        return True
+
+    # ========== ADD YOUR SINGLE-HAND GESTURE FUNCTIONS BELOW ==========
+    def _two_fingers_straight(self, f, lm):
+        """
+        Index and middle fingers straight and together (peace sign).
+
+        Fully rotation-invariant: all measurements are relative to the
+        hand's own size (palm length) and use 2D distances, so it works
+        at any angle, distance, or hand orientation.
+        """
+
+        # Index and middle must be raised
+        if not (f["index"] and f["middle"]):
+            return False
+
+        # Ring and pinky must be tucked down
+        if f["ring"] or f["pinky"]:
+            return False
+
+        # Thumb state is ignored (people naturally leave it out/bent)
+
+        # Reference scale = palm length (wrist -> middle MCP).
+        # Stable at any angle; everything is compared against it.
+        wrist       = lm[LM.WRIST]
+        middle_mcp  = lm[LM.MIDDLE_MCP]
+        index_tip   = lm[LM.INDEX_TIP]
+        index_mcp   = lm[LM.INDEX_MCP]
+        middle_tip  = lm[LM.MIDDLE_TIP]
+
+        hand_scale = np.hypot(wrist.x - middle_mcp.x, wrist.y - middle_mcp.y)
+        if hand_scale < 1e-4:
+            return False
+
+        def length(a, b):
+            return np.hypot(a.x - b.x, a.y - b.y)
+
+        # Both fingers must clearly extend (relative to the hand size)
+        if length(index_tip, index_mcp) < 0.40 * hand_scale:
+            return False
+        if length(middle_tip, middle_mcp) < 0.40 * hand_scale:
+            return False
+
+        # Finger tips must be close together (2D, any angle)
+        if length(index_tip, middle_tip) > 0.50 * hand_scale:
+            return False
+
+        # Fingers must be parallel
+        index_vec = np.array([index_tip.x - index_mcp.x,
+                              index_tip.y - index_mcp.y])
+        middle_vec = np.array([middle_tip.x - middle_mcp.x,
+                               middle_tip.y - middle_mcp.y])
+
+        index_vec = index_vec / (np.linalg.norm(index_vec) + 1e-6)
+        middle_vec = middle_vec / (np.linalg.norm(middle_vec) + 1e-6)
+
+        dot_product = np.dot(index_vec, middle_vec)
+        angle = np.degrees(np.arccos(np.clip(dot_product, -1.0, 1.0)))
+        if angle > 25:
+            return False
+
+        return True

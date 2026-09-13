@@ -108,18 +108,27 @@ class HandTracker:
         return hands_detected, frame
 
     def get_finger_states(self, hand: HandData) -> dict:
-        lm = hand.landmarks
-        if hand.handedness == "Right":
-            thumb_up = lm[LM.THUMB_TIP].x < lm[LM.THUMB_IP].x
-        else:
-            thumb_up = lm[LM.THUMB_TIP].x > lm[LM.THUMB_IP].x
+        """
+        Detect which fingers are extended.
 
+        Rotation-invariant: compares each finger's distance from the wrist,
+        so it works no matter which way the hand is angled or flipped.
+        Returns dict with True/False for each finger.
+        """
+        lm = hand.landmarks
+        wrist = lm[LM.WRIST]
+
+        def dist_to_wrist(idx):
+            return np.hypot(lm[idx].x - wrist.x, lm[idx].y - wrist.y)
+
+        # A finger is extended when its TIP is clearly farther from the
+        # wrist than its PIP knuckle -- true for any hand orientation.
         return {
-            "thumb":  thumb_up,
-            "index":  lm[LM.INDEX_TIP].y  < lm[LM.INDEX_PIP].y,
-            "middle": lm[LM.MIDDLE_TIP].y < lm[LM.MIDDLE_PIP].y,
-            "ring":   lm[LM.RING_TIP].y   < lm[LM.RING_PIP].y,
-            "pinky":  lm[LM.PINKY_TIP].y  < lm[LM.PINKY_PIP].y,
+            "thumb":  dist_to_wrist(LM.THUMB_TIP) > dist_to_wrist(LM.THUMB_IP),
+            "index":  dist_to_wrist(LM.INDEX_TIP) > dist_to_wrist(LM.INDEX_PIP),
+            "middle": dist_to_wrist(LM.MIDDLE_TIP) > dist_to_wrist(LM.MIDDLE_PIP),
+            "ring":   dist_to_wrist(LM.RING_TIP)   > dist_to_wrist(LM.RING_PIP),
+            "pinky":  dist_to_wrist(LM.PINKY_TIP)  > dist_to_wrist(LM.PINKY_PIP),
         }
 
     def get_pinch_distance(self, hand: HandData) -> float:

@@ -1,83 +1,113 @@
-import json
-import os
 import time
-from core.tracker import HandTracker, HandData
+from core.tracker import HandTracker
 from gestures.defaults.static_poses import StaticPoseDetector
 from gestures.defaults.swipe import SwipeDetector
-from gestures.defaults.pinch import PinchDetector
-from gestures.defaults.compound import WaveDetector, HoldDetector, WristRotationDetector
 
 
 class GestureEngine:
-    def __init__(self, tracker: HandTracker, custom_gestures_path=None):
+    def __init__(self, tracker: HandTracker, custom_gestures_path=None, settings=None):
         self.tracker  = tracker
         self.active   = False
 
         self.static_detector = StaticPoseDetector(tracker)
-        self.swipe_detector  = SwipeDetector()
-        self.pinch_detector  = PinchDetector()
-        self.wave_detector   = WaveDetector()
-        self.hold_detector   = HoldDetector(hold_duration=1.5)
-        self.wrist_detector  = WristRotationDetector()
+        self.swipe_detector  = SwipeDetector(
+            window_size=20,
+            min_distance=0.15,
+            min_speed=0.010,
+            cooldown_sec=0.5
+        )
+
+        settings = settings or {}
+        self._hold_duration_sec = settings.get("hold_duration_sec", 1.5)
+        self._gesture_gap_sec   = settings.get("gesture_gap_sec", 1.2)
 
         self._last_gesture      = None
         self._last_gesture_time = 0
-        print("[GestureEngine] Ready.")
+        self._activation_cooldown = 1.5
+
+        self._pose_was_active    = False
+        self._pose_active_start  = 0
+        self._hold_triggered     = False
+        self._miss_frames        = 0
+        self._hysteresis_frames  = 8
+        self.pose_active         = False
+
+        print("[GestureEngine] Ready")
 
     def process(self, hands):
         if not hands:
             self.swipe_detector.reset()
+            self._reset_hold()
             return None
 
-        hand   = hands[0]
-        center = self.tracker.get_hand_center(hand)
-        pinch  = self.tracker.get_pinch_distance(hand)
+        now = time.time()
 
-        # Activation — always live
-        wave = self.wave_detector.update(center[0])
-        if wave == 1 and not self.active:
-            self.active = True
-            return "system_activate"
-        if wave == 2 and self.active:
-            self.active = False
-            return "system_deactivate"
+        # Activation check
+        two_hand_gesture = self.static_detector.detect_two_hands(hands)
+        
+        if two_hand_gesture == "two_hands_camera":
+            if now - self._last_gesture_time > self._activation_cooldown:
+                self.active = not self.active
+                self._last_gesture_time = now
+                return "system_activate" if self.active else "system_deactivate"
 
         if not self.active:
+            self.swipe_detector.reset()
+            self._reset_hold()
             return None
-
-        swipe = self.swipe_detector.update(center)
-        if swipe:
-            return self._emit(swipe)
-
-        pinch_g = self.pinch_detector.update(pinch)
-        if pinch_g:
-            return self._emit(pinch_g)
-
-        wrist = self.wrist_detector.update(hand)
-        if wrist:
-            return self._emit(wrist)
-
+        
+        # Single-hand gestures: process the first detected hand.
+        # Don't reject when a 2nd hand is falsely detected - it would
+        # silently block the peace-sign gesture every frame.
+        hand = hands[0]
         pose = self.static_detector.detect(hand)
-        held = self.hold_detector.update(pose)
-        if held:
-            return self._emit(f"hold_{held}")
 
-        instant = {"thumbs_up","thumbs_down","ok_sign",
-                   "three_fingers_up","three_fingers_down",
-                   "four_fingers_up","l_shape"}
-        if pose in instant:
-            return self._emit(pose)
+        # Peace sign: hold both fingers up for a few seconds to trigger.
+        # One gesture per hold, with a gap before it can fire again.
+        if pose == "two_fingers_straight":
+            self._miss_frames = 0
+            if not self._pose_was_active:
+                self._pose_was_active   = True
+                self._pose_active_start = now
+                self._hold_triggered    = False
+                print("[Pose] two_fingers_straight")
+
+            self.pose_active = True
+            held_for = now - self._pose_active_start
+            if (not self._hold_triggered
+                    and held_for >= self._hold_duration_sec
+                    and now - self._last_gesture_time >= self._gesture_gap_sec):
+                self._hold_triggered = True
+                return self._emit("hold_peace_sign")
+        else:
+            # Hysteresis: a few lost frames (flicker) must NOT reset the
+            # hold timer, otherwise the gesture can never reach threshold.
+            self._miss_frames += 1
+            if self._miss_frames >= self._hysteresis_frames:
+                self._reset_hold()
+            self.pose_active = self._pose_was_active
 
         return None
 
+    def _reset_hold(self):
+        self._pose_was_active   = False
+        self._hold_triggered    = False
+        self._miss_frames       = 0
+        self.pose_active        = False
+
     def _emit(self, name):
         now = time.time()
-        if name == self._last_gesture and now - self._last_gesture_time < 0.4:
+        
+        if now - self._last_gesture_time < 0.5:
             return None
+        
         self._last_gesture      = name
         self._last_gesture_time = now
         print(f"[Gesture] {name}")
         return name
 
     def get_hold_progress(self):
-        return self.hold_detector.get_progress()
+        if not self.pose_active or self._hold_triggered:
+            return 0.0
+        p = (time.time() - self._pose_active_start) / self._hold_duration_sec
+        return max(0.0, min(1.0, p))
