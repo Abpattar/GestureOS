@@ -2,6 +2,8 @@
   "gestures": {
     "swipe_left": "switch_window_left",
     "swipe_right": "switch_window_right",
-    "hold_peace_sign": "cycle_window_forward"
+    "hold_peace_sign": "cycle_window_forward",
+    "hold_open_palm": "volume_up",
+    "hold_fist": "volume_down"
   }
 }

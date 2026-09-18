@@ -16,8 +16,10 @@
     "swipe_min_speed": 0.008,
     "swipe_cooldown_sec": 0.6,
     "pinch_threshold": 0.07,
-    "hold_duration_sec": 0.6,
-    "gesture_gap_sec": 0.8
+    "hold_duration_sec": 0.7,
+    "gesture_gap_sec": 0.8,
+    "volume_identify_sec": 0.7,
+    "volume_repeat_sec": 0.2
   },
   "ui": {
     "show_overlay": true,

@@ -14,7 +14,15 @@ class StaticPoseDetector:
         # Two fingers straight (for window switching)
         if self._two_fingers_straight(fingers, lm):
             return "two_fingers_straight"
-        
+
+        # Open palm (all 5 fingers up) - for volume control
+        if self._open_palm(fingers, lm):
+            return "open_palm"
+
+        # Fist (all fingers curled) - for volume control
+        if self._fist(fingers, lm):
+            return "fist"
+
         # ADD YOUR OTHER GESTURES HERE
         
         return None
@@ -144,5 +152,66 @@ class StaticPoseDetector:
         angle = np.degrees(np.arccos(np.clip(dot_product, -1.0, 1.0)))
         if angle > 25:
             return False
+
+        return True
+
+    # ========== ADD YOUR SINGLE-HAND GESTURE FUNCTIONS BELOW ==========
+    def _open_palm(self, f, lm):
+        """
+        All 5 fingers clearly extended (open palm).
+
+        Primary check is the finger-state test (tip farther from wrist than
+        its own knuckle) which is robust and rotation-invariant. A single
+        gentle spread sanity-check rejects fists/bunched fingers without
+        causing flicker at a distance or odd angles.
+        """
+        if not all(f.values()):
+            return False
+
+        wrist       = lm[LM.WRIST]
+        middle_mcp  = lm[LM.MIDDLE_MCP]
+
+        hand_scale = np.hypot(wrist.x - middle_mcp.x, wrist.y - middle_mcp.y)
+        if hand_scale < 1e-4:
+            return False
+
+        # A real open palm spreads index-to-pinky wider than half the palm.
+        # (Deliberately lenient so the pose does not flicker during a hold.)
+        if np.hypot(lm[LM.INDEX_TIP].x - lm[LM.PINKY_TIP].x,
+                    lm[LM.INDEX_TIP].y - lm[LM.PINKY_TIP].y) < 0.45 * hand_scale:
+            return False
+
+        return True
+
+    def _fist(self, f, lm):
+        """
+        Fist: all four fingers curled into the palm (thumb free).
+
+        Primary filter is the finger-state test (tip NOT farther from the
+        wrist than its knuckle). A geometric extra check keeps fingertips
+        curled in close to their knuckles, so a hand merely trailing its
+        fingers downward isn't mistaken for a fist. Rotation-invariant.
+        """
+        # All four fingers must be curled down (not extended).
+        if f["index"] or f["middle"] or f["ring"] or f["pinky"]:
+            return False
+
+        wrist       = lm[LM.WRIST]
+        middle_mcp  = lm[LM.MIDDLE_MCP]
+
+        hand_scale = np.hypot(wrist.x - middle_mcp.x, wrist.y - middle_mcp.y)
+        if hand_scale < 1e-4:
+            return False
+
+        # Fingertips must sit close to their own knuckles (a real fist).
+        for tip_ix, mcp_ix in [
+            (LM.INDEX_TIP,  LM.INDEX_MCP),
+            (LM.MIDDLE_TIP, LM.MIDDLE_MCP),
+            (LM.RING_TIP,   LM.RING_MCP),
+            (LM.PINKY_TIP,  LM.PINKY_MCP),
+        ]:
+            if np.hypot(lm[tip_ix].x - lm[mcp_ix].x,
+                        lm[tip_ix].y - lm[mcp_ix].y) > 0.55 * hand_scale:
+                return False
 
         return True

@@ -93,11 +93,17 @@ def main():
             # 2-finger hold progress bar
             progress = engine.get_hold_progress()
             if progress > 0.0 or engine.pose_active:
-                cv2.putText(annotated_frame, "2 FINGERS UP - SWITCH WINDOW",
+                cv2.putText(annotated_frame, "RIGHT: 2 FINGERS UP - SWITCH WINDOW",
                             (10, 100), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 220, 255), 1)
                 bar_w = int(280 * progress)
                 cv2.rectangle(annotated_frame, (10, 108), (290, 122), (60, 60, 60), -1)
                 cv2.rectangle(annotated_frame, (10, 108), (10 + bar_w, 122), (0, 220, 255), -1)
+
+            # Left hand volume indicators
+            if engine.volume_active:
+                vol_text = "LEFT: OPEN PALM - VOLUME UP" if engine._vol_pose == "open_palm" else "LEFT: FIST - VOLUME DOWN"
+                cv2.putText(annotated_frame, vol_text,
+                            (10, 140), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (80, 255, 80), 1)
 
             if gesture:
                 cv2.putText(annotated_frame, f"Gesture: {gesture}",
